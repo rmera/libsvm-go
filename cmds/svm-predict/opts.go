@@ -20,7 +20,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ewalker544/libsvm-go"
+	"github.com/rmera/libsvm-go"
 	"io"
 	"io/ioutil"
 	"os"

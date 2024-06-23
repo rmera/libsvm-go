@@ -19,8 +19,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/ewalker544/libsvm-go"
 	"os"
+
+	libSvm "github.com/rmera/libsvm-go"
 )
 
 func main() {
