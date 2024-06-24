@@ -21,6 +21,7 @@ package libSvm
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -84,7 +85,7 @@ func (p *Problem) Scale(minmax [][2]float64, lowandup ...float64) ([][2]float64,
 					minmax[i-v][0] = val
 				}
 				if minmax[i-v][1] < val {
-					minmax[i][1] = val
+					minmax[i-v][1] = val
 				}
 
 			}
@@ -220,28 +221,25 @@ func (problem *Problem) ProblemSize() int {
 	return problem.l
 }
 
-//rmera return the problem as a slice of string
-//where each string represents a vector. The string
-//is formated in the libSVM format:
+//rm
+//Returns a string for the current vector,
+//in the libSVM format:
 //label index1:value1 index2:value2 (...)
-func (problem *Problem) Strings() []string {
-	ret := make([]string, 0, problem.l)
-	for j := 0; j < problem.l; j++ {
-		y, m := problem.GetLine()
-		keys := make([]int, len(m))
-		i := 0
-		for k := range m {
-			keys[i] = k
-			i++
-		}
-		sort.Ints(keys)
-		fields := make([]string, 1, len(keys))
-		fields[0] = fmt.Sprintf("%5.3f", y)
-		for _, v := range keys {
-			s := fmt.Sprintf("%d:%3.5f", v, m[v])
-			fields = append(fields, s)
-		}
-		ret = append(ret, strings.Join(fields, " "))
+func (problem *Problem) String() string {
+	y, m := problem.GetLine()
+	keys := make([]int, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
 	}
-	return ret
+	sort.Ints(keys)
+	fields := make([]string, 1, len(keys))
+	fields[0] = fmt.Sprintf("%d", int(math.Round(y))) //we might want to change this.
+	for _, v := range keys {
+		s := fmt.Sprintf("%d:%7.4f", v, m[v])
+		fields = append(fields, s)
+	}
+	return strings.Join(fields, " ")
+
 }

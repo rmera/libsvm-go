@@ -92,12 +92,35 @@ func MapToSnode(m map[int]float64) []snode {
 }
 
 //rm
+//write a range file in the libsvm format.
+func WriteRanges2File(fname string, minmax [][2]float64, lu []float64) error {
+	f, err := os.Create(fname)
+	defer f.Close()
+	if err != nil {
+		return fmt.Errorf("libsvm-go: Couldn't open file to save scaling parameters %v", err)
+	}
+	sf := fmt.Sprintf
+	f.WriteString("x\n")
+	f.WriteString(sf("%.0f %.0f\n", lu[0], lu[1]))
+	for i, v := range minmax {
+		e := "\n"
+		if i == len(minmax)-1 {
+			e = ""
+		}
+		f.WriteString(sf("%d %f %f%s", i+1, v[0], v[1], e))
+	}
+
+	return nil
+}
+
+//rm
 //Reads a libSVM-formatted range file producing the range of each
 //component of the vectors, and the "target" range for scaling.
-func ReadRangesFile(filename string) ([][2]float64, []float64, error) {
+func ReadRangesFromFile(filename string) ([][2]float64, []float64, error) {
 	var lu = make([]float64, 2)
 	var ret = make([][2]float64, 0, 2)
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,6 +149,11 @@ func ReadRangesFile(filename string) ([][2]float64, []float64, error) {
 				}
 				lu[v] = val
 			}
+			continue
+		}
+		//We'll skip empty lines. It could mostly happen after the last one.
+		//we also allow full-line comments starting with "#"
+		if len(line) == 0 || line == "\n" || strings.HasPrefix(line, "#") {
 			continue
 		}
 		fi := strings.Fields(line)
