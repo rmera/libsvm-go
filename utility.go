@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -88,6 +89,61 @@ func MapToSnode(m map[int]float64) []snode {
 	x[i] = snode{index: -1}
 
 	return x
+}
+
+//rm
+//Reads a libSVM-formatted range file producing the range of each
+//component of the vectors, and the "target" range for scaling.
+func ReadRangesFile(filename string) ([][2]float64, []float64, error) {
+	var lu = make([]float64, 2)
+	var ret = make([][2]float64, 0, 2)
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+	b := bufio.NewReader(f)
+	for i := 0; ; i++ {
+		line, err := b.ReadString('\n')
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			return nil, nil, err
+		}
+		if i == 0 {
+			continue
+		}
+		if i == 1 {
+			fi := strings.Fields(line)
+			if len(fi) != 2 {
+				return nil, nil, fmt.Errorf("Expected 2 fields in line 2: %s", line)
+			}
+			for _, v := range []int{0, 1} {
+				var val float64
+				val, err = strconv.ParseFloat(fi[v], 64)
+				if err != nil {
+					return nil, nil, err
+				}
+				lu[v] = val
+			}
+			continue
+		}
+		fi := strings.Fields(line)
+		if len(fi) < 3 {
+			return nil, nil, fmt.Errorf("Expected 3 fields in line %d: %s", i, line)
+		}
+		ra := [2]float64{0, 0}
+		for j, v := range []int{1, 2} {
+			ra[j], err = strconv.ParseFloat(fi[v], 64)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		ret = append(ret, ra)
+
+	}
+
+	return ret, lu, nil
 }
 
 func SnodeToMap(x []snode) map[int]float64 {

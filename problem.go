@@ -22,6 +22,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -43,6 +44,69 @@ func NewProblem(file string, param *Parameter) (*Problem, error) {
 	prob := &Problem{l: 0, i: 0}
 	err := prob.Read(file, param)
 	return prob, err
+}
+
+func scale(v, l, u float64, mm [2]float64) float64 {
+	return l + (u-l)*(v-mm[0])/(mm[1]-mm[0])
+
+}
+
+//rmera: Not completely sure of this one.
+//It will absolutely fail if not all vector have these same amount of components.
+func (problem *Problem) Features() int {
+	return problem.x[1] - problem.x[0]
+}
+
+//rmera: Scales the whole problem so that, for each feature, all its values run between lowandup[0]
+//and lowandup[1] (-1 and 1 by default, respectively). minmax is a with as many elements as
+//features, where each element is a 2-array with the min and max for the respective feature.
+//if minmax is nil, it will be obtained by the function. If it is given but doesn't have enough
+//elements, Scale will return an error.
+//sorry about using "p" instead of "problem" for the receiver :(
+func (p *Problem) Scale(minmax [][2]float64, lowandup ...float64) ([][2]float64, error) {
+	u := 1.0
+	l := -1.0
+	if len(lowandup) > 0 {
+		l = lowandup[0]
+	}
+	if len(lowandup) > 1 {
+		u = lowandup[1]
+	}
+	if minmax == nil {
+		minmax = make([][2]float64, 0, len(p.x))
+		for j, v := range p.x {
+			for i := v; p.xSpace[i].index != -1; i++ {
+				if j == 0 {
+					minmax = append(minmax, [2]float64{p.xSpace[i].value, p.xSpace[i].value})
+				}
+				val := p.xSpace[i].value
+				if minmax[i-v][0] > val {
+					minmax[i-v][0] = val
+				}
+				if minmax[i-v][1] < val {
+					minmax[i][1] = val
+				}
+
+			}
+		}
+
+	}
+	_, m := p.GetLine()
+	features := len(m)
+	if len(minmax) < features {
+		return nil, fmt.Errorf("Not enough minmax values supplied. Got: %d, need: %d", len(minmax), p.Features())
+	}
+	for _, v := range p.x {
+		for i := v; p.xSpace[i].index != -1; i++ {
+			val := p.xSpace[i].value
+			if len(minmax) <= i-v {
+				//This should mean that vectors don't have all the same dimensions.
+				panic(fmt.Sprintf("Bug! Code wrongly predicts the number of minmax needed. Prediction: %d", features))
+			}
+			p.xSpace[i].value = scale(val, l, u, minmax[i-v])
+		}
+	}
+	return minmax, nil
 }
 
 func (problem *Problem) Read(file string, param *Parameter) error { // reads the problem from the specified file
@@ -154,4 +218,30 @@ func (problem *Problem) GetLine() (y float64, x map[int]float64) {
  */
 func (problem *Problem) ProblemSize() int {
 	return problem.l
+}
+
+//rmera return the problem as a slice of string
+//where each string represents a vector. The string
+//is formated in the libSVM format:
+//label index1:value1 index2:value2 (...)
+func (problem *Problem) Strings() []string {
+	ret := make([]string, 0, problem.l)
+	for j := 0; j < problem.l; j++ {
+		y, m := problem.GetLine()
+		keys := make([]int, len(m))
+		i := 0
+		for k := range m {
+			keys[i] = k
+			i++
+		}
+		sort.Ints(keys)
+		fields := make([]string, 1, len(keys))
+		fields[0] = fmt.Sprintf("%5.3f", y)
+		for _, v := range keys {
+			s := fmt.Sprintf("%d:%3.5f", v, m[v])
+			fields = append(fields, s)
+		}
+		ret = append(ret, strings.Join(fields, " "))
+	}
+	return ret
 }
