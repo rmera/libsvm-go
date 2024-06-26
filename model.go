@@ -46,12 +46,24 @@ func NewModel(param *Parameter) *Model {
 func NewModelFromFile(file string) *Model {
 	param := NewParameter()
 	model := NewModel(param)
-	model.ReadModel(file)	
+	model.ReadModel(file)
 	return model
 }
 
 func (model Model) NrClass() int {
 	return model.nrClass
+}
+
+//rm
+//updates the Probability field for the parameter in the model
+//with the first bool value given, if any, and returns the updated value for
+//it. If no bool value is given, simply returns the current value of the
+//Probability field for the parameter in the model.
+func (model Model) Probability(p ...bool) bool {
+	if len(p) > 0 {
+		model.param.Probability = p[0]
+	}
+	return model.param.Probability
 }
 
 func groupClasses(prob *Problem) (nrClass int, label []int, start []int, count []int, perm []int) {
@@ -355,4 +367,3 @@ func (model *Model) Train(prob *Problem) error {
 	}
 	return nil
 }
-
